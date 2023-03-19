@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using VirtualCanvasDemo.Controls;
@@ -16,6 +17,7 @@ namespace VirtualCanvasDemo
 
         public DemoDiagram()
         {
+            this.backdrop = new Border() { Background = Brushes.White };
             this.Canvas = new VirtualCanvas();
 
             this.Canvas.VisualFactory = new DemoShapeFactory();
@@ -26,14 +28,21 @@ namespace VirtualCanvasDemo
             this.Canvas.SetBinding(VirtualCanvas.ScaleProperty, this, ScaleProperty);
             this.Canvas.SetBinding(VirtualCanvas.OffsetProperty, this, OffsetProperty);
 
+            this.AddLogicalChild(this.backdrop);
+            this.AddVisualChild(this.backdrop);
+
             this.AddLogicalChild(this.Canvas);
             this.AddVisualChild(this.Canvas);
 
+            this.Focusable = true;
+
         }
 
-        public DemoSpatialIndex Index {
+        public DemoSpatialIndex Index
+        {
             get => (DemoSpatialIndex)this.Canvas.Items;
-            set {
+            set
+            {
                 this.Canvas.Items = value;
                 CoerceValue(ScrollExtentProperty);
             }
@@ -57,6 +66,8 @@ namespace VirtualCanvasDemo
             }
         }
 
+        private Border backdrop;
+
         private VirtualCanvas Canvas { get; }
 
         private double VerticalScrollIncrement
@@ -72,14 +83,17 @@ namespace VirtualCanvasDemo
         #region WPF Children Implementation
         protected override int VisualChildrenCount
         {
-            get { return 1; }
+            get { return 2; }
         }
 
         protected override Visual GetVisualChild(int index)
         {
-            if (index == 0)
+            switch (index)
             {
-                return this.Canvas;
+                case 0:
+                    return this.backdrop;
+                case 1:
+                    return this.Canvas;
             }
             return null;
         }
@@ -95,7 +109,8 @@ namespace VirtualCanvasDemo
         {
             get
             {
-                IList<FrameworkElement> children = new List<FrameworkElement>(1);
+                IList<FrameworkElement> children = new List<FrameworkElement>(2);
+                children.Add(this.backdrop);
                 children.Add(this.Canvas);
                 return children;
             }
@@ -461,6 +476,191 @@ namespace VirtualCanvasDemo
 
         #endregion
 
+        #region MinScaleProperty
+
+        public static readonly DependencyProperty MinScaleProperty = DependencyProperty.RegisterAttached("MinScale", typeof(double), typeof(DemoDiagram), new FrameworkPropertyMetadata(MinValidZoomScale, FrameworkPropertyMetadataOptions.Inherits, OnMinScaleChanged), IsScaleValid);
+
+        private static void OnMinScaleChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            d.CoerceValue(ScaleProperty);
+        }
+
+        public static double GetMinScale(DependencyObject element)
+        {
+            return (double)element.GetValue(MinScaleProperty);
+        }
+
+        public static void SetMinScale(DependencyObject element, double scale)
+        {
+            element.SetValue(MinScaleProperty, scale);
+        }
+
+        public double MinScale
+        {
+            get { return (double)GetValue(MinScaleProperty); }
+            set { SetValue(MinScaleProperty, value); }
+        }
+
+        #endregion
+
+        #region MaxScaleProperty
+
+        public static readonly DependencyProperty MaxScaleProperty = DependencyProperty.RegisterAttached("MaxScale", typeof(double), typeof(DemoDiagram), new FrameworkPropertyMetadata(MaxValidZoomScale, FrameworkPropertyMetadataOptions.Inherits, OnMaxScaleChanged), IsScaleValid);
+
+        private static void OnMaxScaleChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            d.CoerceValue(ScaleProperty);
+        }
+
+        public static double GetMaxScale(DependencyObject element)
+        {
+            return (double)element.GetValue(MaxScaleProperty);
+        }
+
+        public static void SetMaxScale(DependencyObject element, double scale)
+        {
+            element.SetValue(MaxScaleProperty, scale);
+        }
+
+        public double MaxScale
+        {
+            get { return (double)GetValue(MaxScaleProperty); }
+            set { SetValue(MaxScaleProperty, value); }
+        }
+
+        #endregion
+
+
+        protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
+        {
+            base.OnPreviewMouseDown(e);
+            this.Focus();
+        }
+
+        public const int MouseWheelDeltaForOneLine = 120;
+        public const double ZoomSensitivityCalibration = 1.8;
+        public const double ZoomWheelSensitivity = 1.0;
+
+        protected override void OnPreviewMouseWheel(MouseWheelEventArgs e)
+        {
+            base.OnPreviewMouseWheel(e);
+
+            double adjusted = ((double)e.Delta * SystemParameters.WheelScrollLines) / (double)Mouse.MouseWheelDeltaForOneLine;
+            if (adjusted > 0)
+            {
+                adjusted = Math.Min(400, Math.Max(20, adjusted)); // pin it so we get a reasonable spread
+            }
+            else
+            {
+                adjusted = Math.Max(-400, Math.Min(-20, adjusted)); // pin it so we get a reasonable spread
+            }
+            double factor = Math.Pow(ZoomSensitivityCalibration * ZoomWheelSensitivity, adjusted / 100);
+
+            this.ZoomBy(factor, e.GetPosition(this));
+            e.Handled = true;
+
+        }
+
+        public void ZoomBy(double factor, Point origin)
+        {
+            var scale = DestinationScale ?? Scale;
+            ZoomTo(scale * factor, origin);
+        }
+
+        public void ZoomTo(double scale, Point origin)
+        {
+            Vector fixedScreenPoint;
+            if (!this.ScrollExtent.IsEmpty)
+            {
+                Rect scrollExtent = TransformFromCanvas().TransformBounds(this.ScrollExtent);
+                fixedScreenPoint = new Vector(
+                    origin.X.AtLeast(scrollExtent.Left).AtMost(scrollExtent.Right),
+                    origin.Y.AtLeast(scrollExtent.Top).AtMost(scrollExtent.Bottom));
+            }
+            else
+            {
+                fixedScreenPoint = (Vector)origin;
+            }
+
+            var fixedWorldPoint = ((Vector)this.Offset + fixedScreenPoint) / this.Scale;
+
+            scale = scale.AtLeast(this.MinScale).AtMost(this.MaxScale);
+            origin = (Point)((fixedWorldPoint * scale) - fixedScreenPoint);
+
+            ZoomTo(scale);
+            MoveTo(origin, true);
+        }
+
+        public bool IsZoomAnimating
+        {
+            get;
+            set;
+        }
+        public Point? DestinationOffset
+        {
+            get;
+            set;
+        }
+
+        public double? DestinationScale
+        {
+            get;
+            set;
+        }
+
+        private double zoomToFitScale;
+
+        // Made it virtual for testing purpose
+        public virtual void ZoomTo(double scale)
+        {
+            if (scale == Scale)
+            {
+                return;
+            }
+
+            DestinationScale = scale;
+
+            var animation = new DoubleAnimation();
+            // Don't specify .From or the animation is jerky when the graph is centered
+            animation.To = scale;
+            animation.Duration = TimeSpan.FromSeconds(scrollAnimationDuration);
+            if (scrollAccelerationRatio != 0)
+            {
+                animation.AccelerationRatio = scrollAccelerationRatio;
+            }
+            if (scrollDecelerationRatio != 0)
+            {
+                animation.DecelerationRatio = scrollDecelerationRatio;
+            }
+            IsZoomAnimating = scrollAnimationDuration > 0;
+            animation.Completed += delegate
+            {
+                IsZoomAnimating = false;
+                if (Scale == DestinationScale)
+                {
+                    Scale = DestinationScale.Value;
+                    BeginAnimation(ScaleProperty, null);
+                    DestinationScale = null;
+                }
+            };
+
+            animation.Freeze();
+
+            if (zoomToFitScale == -1)
+            {
+                zoomToFitScale = 0;
+            }
+            BeginAnimation(ScaleProperty, animation, HandoffBehavior.Compose);
+        }
+
+        public GeneralTransform TransformFromCanvas()
+        {
+            TransformGroup g = new TransformGroup();
+            g.Children.Add(new ScaleTransform(this.Scale, this.Scale));
+            g.Children.Add(new TranslateTransform(-this.Offset.X, -this.Offset.Y));
+            return g;
+        }
+
         #region IScrollInfo
         public bool CanHorizontallyScroll { get; set; }
         public bool CanVerticallyScroll { get; set; }
@@ -538,7 +738,11 @@ namespace VirtualCanvasDemo
 
         public Rect MakeVisible(Visual visual, Rect rectangle)
         {
-            throw new NotImplementedException();
+            if (visual == this)
+            {
+                return this.ScrollExtent;
+            }
+            return rectangle;
         }
 
         public void MouseWheelDown()
@@ -610,18 +814,6 @@ namespace VirtualCanvasDemo
         }
 
         public bool IsOffsetAnimating
-        {
-            get;
-            set;
-        }
-
-        public Point? DestinationOffset
-        {
-            get;
-            set;
-        }
-
-        public double? DestinationScale
         {
             get;
             set;
