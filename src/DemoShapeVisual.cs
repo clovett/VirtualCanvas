@@ -1,14 +1,17 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Media;
+using VirtualCanvasDemo.Interfaces;
 
 namespace VirtualCanvasDemo
 {
     /// <summary>
     /// This is an even more light weight way to create the visuals by using drawingContext
     /// </summary>
-    class DemoShapeVisual : FrameworkElement
+    class DemoShapeVisual : FrameworkElement, ISemanticZoomable
     {
+        double scale = 1.0;
+
         public DemoShape Shape { get; set; }
 
         protected override void OnRender(DrawingContext drawingContext)
@@ -17,7 +20,7 @@ namespace VirtualCanvasDemo
             Pen pen = null;
             if (Shape.Stroke != null)
             {
-                pen = new Pen(Shape.Stroke, Shape.StrokeThickness);
+                pen = new Pen(Shape.Stroke, Shape.StrokeThickness / this.scale);
             }
 
             switch (Shape.Type)
@@ -71,5 +74,15 @@ namespace VirtualCanvasDemo
             double d = angle * Math.PI / 180;
             return new Point(a * Math.Cos(d), b * Math.Sin(d));
         }
+
+        public void OnZoomChange(double newZoomLevel)
+        {
+            this.scale = newZoomLevel == 0 ? 0.000001 : newZoomLevel;
+            if (Shape.Stroke != null)
+            {
+                this.InvalidateVisual();
+            }
+        }
+
     }
 }

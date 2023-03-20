@@ -99,7 +99,10 @@ namespace VirtualCanvasDemo.Controls
 
         internal static void TickleZoomable(double scale, Visual visual)
         {
-            TickleZoomable(scale, visual as ISemanticZoomable);
+            if (visual is ISemanticZoomable zoomable)
+            {
+                TickleZoomable(scale, zoomable);
+            }
         }
     }
 }

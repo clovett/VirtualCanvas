@@ -14,6 +14,7 @@ namespace VirtualCanvasDemo
 {
     class DemoDiagram : FrameworkElement, IScrollInfo
     {
+        PanGesture panGesture;
 
         public DemoDiagram()
         {
@@ -35,6 +36,7 @@ namespace VirtualCanvasDemo
             this.AddVisualChild(this.Canvas);
 
             this.Focusable = true;
+            this.panGesture = new PanGesture(this);
 
         }
 
@@ -819,6 +821,13 @@ namespace VirtualCanvasDemo
             set;
         }
 
+        internal void MoveBy(double dx, double dy)
+        {
+            var offset = DestinationOffset ?? Offset;
+            MoveTo(new Point(offset.X - dx, offset.Y - dy), false);
+        }
+
+
         public virtual void MoveTo(Point offset, bool animate)
         {
             if (offset == Offset)
@@ -947,6 +956,6 @@ namespace VirtualCanvasDemo
             }
         }
 
-        #endregion 
+        #endregion
     }
 }

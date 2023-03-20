@@ -282,8 +282,10 @@ namespace VirtualCanvasDemo.Controls
             this.defaultFactory = new DefaultVisualFactory(this.AddVisualChild);
             this.VisualFactory = this.defaultFactory;
             this.IsVisibleChanged += new DependencyPropertyChangedEventHandler(VirtualCanvas_IsVisibleChanged);
+            this.zoomWatcher = new ZoomWatcher(this);
         }
 
+        private ZoomWatcher zoomWatcher;
         private bool isVisible;
 
         private void VirtualCanvas_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
