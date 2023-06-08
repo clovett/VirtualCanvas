@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -14,11 +15,11 @@ namespace VirtualCanvasDemo
 {
     class DemoDiagram : FrameworkElement, IScrollInfo
     {
-        PanGesture panGesture;
+        MouseGestures gestures;
 
         public DemoDiagram()
         {
-            this.backdrop = new Border() { Background = Brushes.White };
+            this.backdrop = new Border() { Background = new SolidColorBrush(Color.FromRgb(0x1E, 0x1E, 0x1E)) };
             this.Canvas = new VirtualCanvas();
 
             this.Canvas.VisualFactory = new DemoShapeFactory();
@@ -36,7 +37,7 @@ namespace VirtualCanvasDemo
             this.AddVisualChild(this.Canvas);
 
             this.Focusable = true;
-            this.panGesture = new PanGesture(this);
+            this.gestures = new MouseGestures(this);
 
         }
 
@@ -533,10 +534,24 @@ namespace VirtualCanvasDemo
         #endregion
 
 
-        protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
+        private DemoShapeVisual selection;
+
+        public DemoShapeVisual Selection
         {
-            base.OnPreviewMouseDown(e);
-            this.Focus();
+            get => selection;
+            set
+            {
+                if (this.selection != null)
+                {
+                    this.selection.Selected = false;
+                }
+                this.selection = value;
+                if (this.selection != null)
+                {
+                    Debug.WriteLine("Selected " + value.Shape);
+                    this.selection.Selected = true;
+                }
+            }
         }
 
         public const int MouseWheelDeltaForOneLine = 120;

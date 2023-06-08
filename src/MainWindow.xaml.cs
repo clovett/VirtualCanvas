@@ -27,14 +27,15 @@ namespace VirtualCanvasDemo
             index.Extent = new Rect(0, 0, maxX, maxY);
             for (int i = 0; i < 100000; i++)
             {
-                double w = r.NextDouble() * 200;
-                double h = r.NextDouble() * 200;
+                double w = 50 + (r.NextDouble() * 150);
+                double h = 50 + (r.NextDouble() * 150);
                 double x = r.NextDouble() * maxX - w;
                 double y = r.NextDouble() * maxY - h;
                 Rect bounds = new Rect(x, y, w, h);
                 index.Insert(new DemoShape()
                 {
                     Bounds = bounds,
+                    IsVisible = true,
                     Fill = GetRandomColor(r),
                     Stroke = GetRandomColor(r),
                     StrokeThickness = 2,
@@ -44,6 +45,7 @@ namespace VirtualCanvasDemo
             this.Diagram.Index = index;
             this.Diagram.ScrollExtent = index.Extent;
             this.Diagram.MoveTo(new Point(5000, 5000), true);
+            this.WindowState = WindowState.Normal;
         }
 
         private Brush GetRandomColor(Random r)

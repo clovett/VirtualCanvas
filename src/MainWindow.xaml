@@ -5,8 +5,10 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:VirtualCanvasDemo"
         mc:Ignorable="d"
+        WindowState="Minimized"
+        Background="#1E1E1E"
         Title="VirtualCanvas" Height="800" Width="1280">
-    <ScrollViewer x:Name="Scroller" 
+  <ScrollViewer x:Name="Scroller" 
                   HorizontalScrollBarVisibility="Auto"
                   VerticalScrollBarVisibility="Auto"
                   HorizontalAlignment="Stretch"

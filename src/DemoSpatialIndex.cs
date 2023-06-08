@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Windows;
+using System.ComponentModel;
 using VirtualCanvasDemo.Interfaces;
 using VirtualCanvasDemo.QuadTree;
 
@@ -15,38 +15,28 @@ namespace VirtualCanvasDemo
 
         public void Insert(DemoShape item)
         {
-            this.Insert(new DemoItem(item), item.Bounds, 0);
+            item.PropertyChanged -= OnItemChanged; // make sure we never add this handler twice
+            item.PropertyChanged += OnItemChanged;
+
+            this.Insert(item, item.Bounds, 0);
+
             if (Changed != null)
             {
                 Changed(this, EventArgs.Empty);
             }
         }
 
-        /// <summary>
-        /// This wrapper implements ISpatialItem on behalf of our DemoShape object
-        /// </summary>
-        class DemoItem : ISpatialItem
+        private void OnItemChanged(object sender, PropertyChangedEventArgs e)
         {
-            DemoShape shape;
-
-            public DemoItem(DemoShape shape)
+            if (sender is DemoShape shape)
             {
-                this.shape = shape;
-                this.IsVisible = true;
+                if (e.PropertyName == "Bounds")
+                {
+                    // needs to be reindexed.
+                    this.Remove(shape);
+                    this.Insert(shape);
+                }
             }
-
-            public bool IsLayoutValid { get; set; }
-            public double Priority { get; set; }
-            public int ZIndex { get; set; }
-            public bool IsVisible { get; set; }
-
-            public void OnMeasure(UIElement visual)
-            {
-            }
-
-            public object DataItem => shape;
-
-            public Rect Bounds => shape.Bounds;
         }
     }
 }

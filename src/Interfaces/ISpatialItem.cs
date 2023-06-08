@@ -4,10 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-using System.ComponentModel;
 using System.Windows;
-using System.Windows.Media;
 
 namespace VirtualCanvasDemo.Interfaces
 {
@@ -20,11 +17,6 @@ namespace VirtualCanvasDemo.Interfaces
         /// The bounds of the item.
         /// </summary>
         Rect Bounds { get; }
-
-        /// <summary>
-        /// Return a boolean that indicates whether the bounds is actually computed yet.
-        /// </summary>
-        bool IsLayoutValid { get; }
 
         /// <summary>
         /// A value indicating how visually important the element is relative to other items.
