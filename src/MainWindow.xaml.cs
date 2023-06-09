@@ -39,7 +39,8 @@ namespace VirtualCanvasDemo
                     Fill = GetRandomColor(r),
                     Stroke = GetRandomColor(r),
                     StrokeThickness = 2,
-                    Type = (ShapeType)r.Next(4)
+                    Type = (ShapeType)r.Next(4),
+                    StarPoints = r.Next(4, 10)
                 });
             }
             this.Diagram.Index = index;

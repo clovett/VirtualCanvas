@@ -27,6 +27,7 @@ namespace VirtualCanvasDemo
         private Brush fill;
         private Brush stroke;
         private double strokeThickness;
+        private int starPoints;
         private ShapeType shapeType;
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -179,6 +180,19 @@ namespace VirtualCanvasDemo
                 {
                     this.shapeType = value;
                     this.OnChanged("Type");
+                }
+            }
+        }
+
+        public int StarPoints
+        {
+            get => this.starPoints;
+            set
+            {
+                if (this.starPoints != value)
+                {
+                    this.starPoints = value;
+                    this.OnChanged("        public int StarPoints\r\n");
                 }
             }
         }

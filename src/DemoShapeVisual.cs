@@ -11,18 +11,17 @@ namespace VirtualCanvasDemo
     class DemoShapeVisual : FrameworkElement, ISemanticZoomable
     {
         double scale = 1.0;
-        bool selected = false;
 
         public DemoShape Shape { get; set; }
 
         public bool Selected
         {
-            get => selected;
+            get => Shape?.IsSelected == true;
             set
             {
-                if (this.selected != value)
+                if (Shape != null)
                 {
-                    this.selected = value;
+                    Shape.IsSelected = value;
                     this.InvalidateVisual();
                 }
             }
@@ -33,7 +32,7 @@ namespace VirtualCanvasDemo
             base.OnRender(drawingContext);
             Pen selectionPen = null;
             Rect selectionBounds;
-            if (this.selected)
+            if (this.Selected)
             {
                 selectionBounds = this.Shape.Bounds;
                 selectionBounds.Inflate(1.5, 1.5);
@@ -51,92 +50,74 @@ namespace VirtualCanvasDemo
                     {
                         double xrad = Shape.Bounds.Width / 2;
                         double yrad = Shape.Bounds.Height / 2;
+                        drawingContext.DrawEllipse(Shape.Fill, pen, new Point(xrad, yrad), xrad, yrad);
 
-                        if (this.selected)
+                        if (this.Selected)
                         {
                             drawingContext.DrawEllipse(null, selectionPen, new Point(xrad, yrad), xrad, yrad);
                         }
 
-                        drawingContext.DrawEllipse(Shape.Fill, pen, new Point(xrad, yrad), xrad, yrad);
                     }
                     break;
                 case ShapeType.Rect:
-                    if (this.selected)
+                    drawingContext.DrawRectangle(Shape.Fill, pen, new Rect(0, 0, Shape.Bounds.Width, Shape.Bounds.Height));
+
+                    if (this.Selected)
                     {
                         drawingContext.DrawRectangle(null, selectionPen, new Rect(-1.5, -1.5, selectionBounds.Width, selectionBounds.Height));
                     }
-                    drawingContext.DrawRectangle(Shape.Fill, pen, new Rect(0, 0, Shape.Bounds.Width, Shape.Bounds.Height));
                     break;
                 case ShapeType.RoundedRect:
                     {
-                        if (this.selected)
+                        var radiusX = Shape.Bounds.Width / 20;
+                        var radiusY = Shape.Bounds.Height / 20;
+                        drawingContext.DrawRoundedRectangle(Shape.Fill, pen, new Rect(0, 0, Shape.Bounds.Width, Shape.Bounds.Height), radiusX, radiusY);
+
+                        if (this.Selected)
                         {
                             var selectionRadiusX = selectionBounds.Width / 20;
                             var selectionRadiusY = selectionBounds.Height / 20;
                             drawingContext.DrawRoundedRectangle(null, selectionPen, new Rect(-1.5, -1.5, selectionBounds.Width, selectionBounds.Height), selectionRadiusX, selectionRadiusY);
                         }
-                        var radiusX = Shape.Bounds.Width / 20;
-                        var radiusY = Shape.Bounds.Height / 20;
-                        drawingContext.DrawRoundedRectangle(Shape.Fill, pen, new Rect(0, 0, Shape.Bounds.Width, Shape.Bounds.Height), radiusX, radiusY);
                     }
                     break;
                 case ShapeType.Star:
-                    if (this.selected)
+                    drawingContext.DrawGeometry(Shape.Fill, pen, GetStarGeometry(Shape.Bounds, new Vector(0,0)));
+                    if (this.Selected)
                     {
-                        drawingContext.DrawGeometry(null, selectionPen, GetSelectionStarGeometry(selectionBounds));
+                        drawingContext.DrawGeometry(null, selectionPen, GetStarGeometry(selectionBounds, new Vector(-1.5,-1.5)));
                     }
-                    drawingContext.DrawGeometry(Shape.Fill, pen, GetStarGeometry());
                     break;
             }
         }
 
-        private Geometry GetStarGeometry()
+        private Geometry GetStarGeometry(Rect bounds, Vector offset)
         {
-            double a = Shape.Bounds.Width / 2;
-            double b = Shape.Bounds.Height / 2;
+            double a = bounds.Width / 2;
+            double b = bounds.Height / 2;
+            double c = bounds.Width / 10;
+            double d = bounds.Height / 10;
+            Point center = new Point(a, b) + offset;
 
             PathGeometry g = new PathGeometry();
-            PathFigure f = new PathFigure() { StartPoint = PointOnEllipse(0, a, b) };
+            PathFigure f = new PathFigure() { StartPoint = center + PointOnEllipse(0, a, b) };
             f.IsClosed = true;
-            foreach (var pt in new Point[] {
-                                PointOnEllipse(0, a, b),
-                                PointOnEllipse(72 * 2, a, b),
-                                PointOnEllipse(72 * 4, a, b),
-                                PointOnEllipse(72, a, b),
-                                PointOnEllipse(72 * 3, a, b)})
-            {
-                f.Segments.Add(new LineSegment(pt, true));
+            double step = 360 / (2 * Shape.StarPoints);
+            for (double angle = 0;  angle < 360 - step; angle += step * 2) {
+                var outer = PointOnEllipse(angle, a, b) + center;
+                var inner = PointOnEllipse(angle + step, c, d) + center;
+                f.Segments.Add(new LineSegment(outer, true));
+                f.Segments.Add(new LineSegment(inner, true));
             }
             g.Figures.Add(f);
             return g;
         }
 
 
-        private Geometry GetSelectionStarGeometry(Rect selectionBounds)
-        {
-            double a = selectionBounds.Width / 2;
-            double b = selectionBounds.Height / 2;
-
-            PathGeometry g = new PathGeometry();
-            PathFigure f = new PathFigure() { StartPoint = PointOnEllipse(0, a, b) };
-            f.IsClosed = true;
-            foreach (var pt in new Point[] {
-                                PointOnEllipse(0, a, b),
-                                PointOnEllipse(72 * 2, a, b),
-                                PointOnEllipse(72 * 4, a, b),
-                                PointOnEllipse(72, a, b),
-                                PointOnEllipse(72 * 3, a, b)})
-            {
-                f.Segments.Add(new LineSegment(pt, true));
-            }
-            g.Figures.Add(f);
-            return g;
-        }
-
-        private Point PointOnEllipse(double angle, double a, double b)
+        private Vector PointOnEllipse(double angle, double a, double b)
         {
             double d = angle * Math.PI / 180;
-            return new Point(a * Math.Cos(d), b * Math.Sin(d));
+            return new Vector(a * Math.Cos(d), b * Math.Sin(d));
         }
 
         public void OnZoomChange(double newZoomLevel)
