@@ -82,7 +82,7 @@ namespace VirtualCanvasDemo.Helpers
                         {
                             // then move the shape
                             var bounds = this.hit.Shape.Bounds;
-                            bounds.Offset(dx, dy);
+                            bounds.Offset(dx / owner.Scale, dy / owner.Scale);
                             this.hit.Shape.Bounds = bounds;
                         }
                         else
